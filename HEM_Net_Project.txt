@@ -1,0 +1,63 @@
+# Import necessary libraries
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
+import seaborn as sns
+import glob as gb
+import cv2
+import tensorflow as tf
+import keras
+import datetime, os
+from sklearn.model_selection  import train_test_split
+import scikitplot
+from tqdm import tqdm
+############################################
+
+## Ensemble  with FGSM  attack   
+     
+##1'st Classifier in the Ensemble
+----------------------------------
+
+perturbed_images1 = fgsm(C_model, test_images1, test_labels1, epsilon, batch_size)*255
+adversarial_images = test_images1 + perturbed_images1
+x_adv1 = np.clip(adversarial_images, 0, 255)
+
+# 2'nd Classifier in the Ensemble
+----------------------------------
+
+perturbed_images2 = fgsm(S_model, test_images1, test_labels1, epsilon, batch_size)*255
+adversarial_images2 = test_images1 + perturbed_images2
+x_adv2 = np.clip(adversarial_images2, 0, 255)
+
+# 3'rd Classifier in the Ensemble
+---------------------------------
+
+perturbed_images3 = fgsm(D_model, test_images1, test_labels1, epsilon, batch_size)*255
+adversarial_images3 = test_images1 + perturbed_images3
+x_adv3 = np.clip(adversarial_images3, 0, 255)
+
+#________________________________________________________________________________________________________
+y_test_cnn = C_model.predict(x_adv1)   #x_adv   with attack
+y_test_sq = S_model.predict(x_adv2)
+y_test_D = D_model.predict(x_adv3)
+
+y_test_ensemble = (y_test_cnn + y_test_sq+ y_test_D) > 1    # Ensemble using Majority voting
+
+#______________________________________
+# Evaluate ensemble model
+
+#test_labels1 = np.argmax(test_labels1, axis=1)
+#y_test_ensemble = np.argmax(y_test_ensemble, axis=1)
+print(classification_report(test_labels1, y_test_ensemble))
+
+#_____________________________jaccard_score
+from sklearn.metrics import jaccard_score
+# Compute the Jaccard coefficient between the predicted and ground truth labels
+jaccard = jaccard_score(test_labels1, y_test_ensemble, average='weighted')
+print('Jaccard coefficient:', jaccard)
+
+#--------------------------------------------------------
+
+
